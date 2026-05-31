@@ -15,79 +15,7 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "Model Predictions Rate",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-          "targets": [
-            {
-              "expr": "rate(bentoml_request_duration_seconds_count[5m])",
-              "legendFormat": "Requests/s",
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 2,
-          "title": "Model Latency (p99)",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "targets": [
-            {
-              "expr": "histogram_quantile(0.99, rate(bentoml_request_duration_seconds_bucket[5m]))",
-              "legendFormat": "p99 latency",
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 3,
-          "title": "Active Services",
-          "type": "stat",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "targets": [
-            {
-              "expr": "count(up)",
-              "legendFormat": "Active Services",
-              "refId": "A"
-            }
-          ],
-          "options": {
-            "colorMode": "background",
-            "graphMode": "none"
-          }
-        },
-        {
-          "id": 4,
-          "title": "K8s Pods Running",
-          "type": "stat",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-          "targets": [
-            {
-              "expr": "count(kube_pod_info)",
-              "legendFormat": "Pods",
-              "refId": "A"
-            }
-          ],
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area"
-          }
-        }
-      ],
-      "time": {"from": "now-1h", "to": "now"}
-    }
-  model-health.json: |
-    {
-      "title": "Model Health & Drift",
-      "uid": "model-health",
-      "tags": ["mlops", "drift"],
-      "timezone": "browser",
-      "schemaVersion": 39,
-      "refresh": "1m",
-      "panels": [
-        {
-          "id": 1,
-          "title": "Prometheus Targets Up",
+          "title": "Service Health (up)",
           "type": "stat",
           "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
           "targets": [
@@ -95,6 +23,11 @@ data:
               "expr": "count(up == 1)",
               "legendFormat": "Up",
               "refId": "A"
+            },
+            {
+              "expr": "count(up == 0) or vector(0)",
+              "legendFormat": "Down",
+              "refId": "B"
             }
           ],
           "options": {
@@ -115,26 +48,49 @@ data:
         },
         {
           "id": 2,
-          "title": "MLOps Namespace Pods",
+          "title": "Targets Status",
           "type": "table",
           "gridPos": {"h": 6, "w": 18, "x": 6, "y": 0},
           "targets": [
             {
-              "expr": "sum(kube_pod_status_ready{namespace=\"mlops\"}) by (pod)",
-              "legendFormat": "{{pod}}",
+              "expr": "up",
+              "legendFormat": "{{job}}",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {"type": "value", "value": "1", "text": "UP"},
+                {"type": "value", "value": "0", "text": "DOWN"}
+              ]
+            }
+          }
+        },
+        {
+          "id": 3,
+          "title": "Time Series Count",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+          "targets": [
+            {
+              "expr": "prometheus_tsdb_head_series",
+              "legendFormat": "Active Series",
               "refId": "A"
             }
           ]
         },
         {
-          "id": 3,
-          "title": "Scrape Duration",
+          "id": 4,
+          "title": "Scrape Duration (seconds)",
           "type": "timeseries",
-          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
           "targets": [
             {
-              "expr": "rate(prometheus_http_request_duration_seconds_sum[5m]) / rate(prometheus_http_request_duration_seconds_count[5m])",
-              "legendFormat": "Scrape time",
+              "expr": "scrape_duration_seconds",
+              "legendFormat": "{{job}}",
               "refId": "A"
             }
           ],
@@ -143,10 +99,35 @@ data:
           }
         },
         {
-          "id": 4,
+          "id": 5,
+          "title": "Samples Scraped per Second",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "rate(prometheus_tsdb_head_samples_appended_total[5m])",
+              "legendFormat": "Samples/s",
+              "refId": "A"
+            }
+          ]
+        }
+      ],
+      "time": {"from": "now-1h", "to": "now"}
+    }
+  model-health.json: |
+    {
+      "title": "Model Health & Drift",
+      "uid": "model-health",
+      "tags": ["mlops", "drift"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "1m",
+      "panels": [
+        {
+          "id": 1,
           "title": "Prometheus Uptime",
           "type": "stat",
-          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
           "targets": [
             {
               "expr": "time() - process_start_time_seconds{job=\"prometheus\"}",
@@ -160,6 +141,85 @@ data:
           },
           "fieldConfig": {
             "defaults": {"unit": "s"}
+          }
+        },
+        {
+          "id": 2,
+          "title": "Scrape Interval Actual",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 18, "x": 6, "y": 0},
+          "targets": [
+            {
+              "expr": "scrape_duration_seconds",
+              "legendFormat": "{{job}} ({{instance}})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "s"}
+          }
+        },
+        {
+          "id": 3,
+          "title": "Storage Retention",
+          "type": "stat",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 6},
+          "targets": [
+            {
+              "expr": "prometheus_tsdb_retention_limit_seconds",
+              "legendFormat": "Retention",
+              "refId": "A"
+            }
+          ],
+          "options": {"colorMode": "value"},
+          "fieldConfig": {
+            "defaults": {"unit": "d"}
+          }
+        },
+        {
+          "id": 4,
+          "title": "Query Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 18, "x": 6, "y": 6},
+          "targets": [
+            {
+              "expr": "rate(prometheus_http_requests_total[5m])",
+              "legendFormat": "{{handler}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "TSDB Blocks",
+          "type": "stat",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "prometheus_tsdb_blocks_loaded",
+              "legendFormat": "Blocks",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 6,
+          "title": "Go Memory Allocations",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "rate(go_memstats_alloc_bytes_total[5m]) / 1024 / 1024",
+              "legendFormat": "Alloc MB/s",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "mbytes"}
           }
         }
       ],
