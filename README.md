@@ -12,7 +12,7 @@ From model experimentation to production serving with automated monitoring, drif
 
 ---
 
-## Architecture
+## Architecture (CLICK TO OPEN)
 
 ![Architecture](./docs/architecture.md)
 
