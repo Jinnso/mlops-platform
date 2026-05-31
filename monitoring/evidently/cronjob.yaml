@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: evidently-monitor
+  namespace: mlops
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: evidently
+              image: ghcr.io/jinnso/evidently-monitor:latest
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: http://mlflow.mlops.svc.cluster.local:5000
+                - name: MLFLOW_S3_ENDPOINT_URL
+                  value: http://minio.storage.svc.cluster.local:9000
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: minio-credentials
+                      key: root-user
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: minio-credentials
+                      key: root-password
+              volumeMounts:
+                - name: reports
+                  mountPath: /app/reports
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "250m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "500m"
+          volumes:
+            - name: reports
+              hostPath:
+                path: /data/evidently/reports
+                type: DirectoryOrCreate
+          restartPolicy: OnFailure

@@ -1,0 +1,21 @@
+service: "service:svc"
+description: "Taxi fare duration prediction model"
+labels:
+  team: mlops
+  project: mlops-platform
+include:
+  - "*.py"
+python:
+  requirements_txt: "/dev/null"
+  packages:
+    - xgboost>=2.1.0
+    - numpy>=2.0.0
+    - pandas>=2.2.0
+    - scikit-learn>=1.6.0
+docker:
+  python_version: "3.11"
+  env:
+    - name: MODEL_NAME
+      value: taxi_fare_predictor
+    - name: MODEL_STAGE
+      value: Production

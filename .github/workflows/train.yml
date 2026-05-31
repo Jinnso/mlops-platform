@@ -1,0 +1,34 @@
+name: Training Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ml-flow/**"
+      - ".github/workflows/train.yml"
+  workflow_dispatch:
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r ml-flow/requirements.txt
+
+      - name: Train model
+        run: python ml-flow/src/train.py
+
+      - name: Evaluate model
+        run: python ml-flow/src/evaluate.py
+
+      - name: Upload metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-metrics
+          path: ml-flow/data/processed/evaluation_results.json
