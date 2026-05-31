@@ -29,3 +29,4 @@ mlruns/
 ml-flow/src/data/processed/
 
 .terraform.lock.hcl
+model/*
