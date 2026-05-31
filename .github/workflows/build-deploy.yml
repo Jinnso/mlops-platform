@@ -1,11 +1,6 @@
 name: Build and Deploy Serving
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "serving/**"
-      - ".github/workflows/build-deploy.yml"
   workflow_dispatch:
 
 env:
@@ -16,42 +11,72 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install bentoml xgboost numpy pandas pydantic scikit-learn
+          pip install mlflow boto3
+
+      - name: Download model from MLflow
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_S3_ENDPOINT_URL: ${{ secrets.MLFLOW_S3_ENDPOINT_URL }}
+        run: |
+          python -c "
+          import mlflow, bentoml
+          mlflow.set_tracking_uri('${{ secrets.MLFLOW_TRACKING_URI }}')
+          model = mlflow.xgboost.load_model('models:/taxi_fare_predictor/Staging')
+          bentoml.xgboost.save_model('taxi_fare_predictor', model)
+          print('Model imported to BentoML')
+          "
+
+      - name: Build BentoML bento
+        working-directory: ./serving
+        run: bentoml build
+
+      - name: Get bento tag
+        id: bento
+        working-directory: ./serving
+        run: |
+          TAG=$(bentoml list | grep taxi_fare_predictor | tail -1 | awk '{print $1 ":" $2}')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Bento tag: $TAG"
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            latest
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./serving
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Update ArgoCD image tag
+      - name: Containerize BentoML bento
+        working-directory: ./serving
         run: |
-          sed -i "s|ghcr.io/jinnso/taxi-fare-serving:.*|ghcr.io/jinnso/taxi-fare-serving:sha-${{ github.sha }}|g" k8s/bentoml/serving.yaml
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git add k8s/bentoml/serving.yaml
-          git commit -m "chore: update serving image to ${{ github.sha }}" || true
-          git push
+          bentoml containerize ${{ steps.bento.outputs.tag }} --platform linux/amd64
+
+      - name: Tag and push to GHCR
+        run: |
+          BENTO_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep taxi_fare_predictor | head -1)
+          docker tag $BENTO_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker tag $BENTO_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+
+      - name: Sync ArgoCD
+        run: |
+          curl -X POST https://${{ secrets.ARGOCD_SERVER }}/api/v1/applications/bentoml-serving/sync \
+            -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' || echo "ArgoCD sync triggered (or skipped if unreachable)"

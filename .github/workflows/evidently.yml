@@ -1,8 +1,6 @@
 name: Evidently Monitoring
 
 on:
-  schedule:
-    - cron: "0 4 * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,12 +14,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r monitoring/evidently/requirements.txt
+        run: pip install evidently pandas numpy pyarrow
 
       - name: Run monitoring
-        id: monitor
         run: python monitoring/evidently/monitor.py
-        continue-on-error: true
 
       - name: Upload monitoring report
         uses: actions/upload-artifact@v4
