@@ -196,7 +196,7 @@ kubectl wait --for=condition=Available deployment/mlflow -n mlops --timeout=120s
 
 # Create MinIO buckets
 kubectl -n storage exec -i deploy/minio -- sh -c \
-  "mc alias set local http://localhost:9000 minioadmin minioadmin123 && \
+  "mc alias set local http://localhost:9000 \$MINIO_USER \$MINIO_PASS && \
    mc mb local/mlflow-artifacts && mc mb local/datasets && mc mb local/models"
 
 # Connect ArgoCD to your fork

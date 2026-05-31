@@ -19,8 +19,8 @@ from src.train import setup_mlflow
 
 
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin123")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 MODEL_NAME = os.getenv("MODEL_NAME", "taxi_fare_predictor")
 RETRAIN_THRESHOLD = float(os.getenv("RETRAIN_RMSE_THRESHOLD", "0.05"))
 

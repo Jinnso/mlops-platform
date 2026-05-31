@@ -32,14 +32,27 @@ FAIL=0
 SKIP=0
 
 KUBECONFIG="${KUBECONFIG:-$HOME/.kube/mlops-config}"
-VM_IP="${VM_IP:-192.168.1.50}"
-MINIO_USER="${MINIO_USER:-minioadmin}"
-MINIO_PASS="${MINIO_PASS:-minioadmin123}"
+VM_IP="${VM_IP:-}"
+MINIO_USER="${MINIO_USER:-}"
+MINIO_PASS="${MINIO_PASS:-}"
 MLFLOW_PORT="${MLFLOW_PORT:-5000}"
 MINIO_PORT="${MINIO_PORT:-9000}"
 SERVING_PORT="${SERVING_PORT:-3000}"
 PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
 GRAFANA_PORT="${GRAFANA_PORT:-3000}"
+
+if [ -z "$VM_IP" ]; then
+    echo "ERROR: VM_IP environment variable is required."
+    echo ""
+    echo "Setup:"
+    echo "  export VM_IP=<your-k3s-vm-ip>"
+    echo "  export MINIO_USER=<minio-username>"
+    echo "  export MINIO_PASS=<minio-password>"
+    echo ""
+    echo "Or create a .env file with:"
+    echo "  cp .env.example .env && source .env"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # Helpers
