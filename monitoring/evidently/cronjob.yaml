@@ -11,8 +11,8 @@ spec:
         spec:
           containers:
             - name: evidently
-              image: ghcr.io/jinnso/evidently-monitor:latest
-              imagePullPolicy: IfNotPresent
+              image: docker.io/library/taxi-evidently:v2
+              imagePullPolicy: Never
               env:
                 - name: MLFLOW_TRACKING_URI
                   value: http://mlflow.mlops.svc.cluster.local:5000
