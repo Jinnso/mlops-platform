@@ -49,23 +49,37 @@ data:
         {
           "id": 2,
           "title": "Targets Status",
-          "type": "table",
+          "type": "stat",
           "gridPos": {"h": 6, "w": 18, "x": 6, "y": 0},
           "targets": [
             {
-              "expr": "up",
-              "legendFormat": "{{job}}",
-              "refId": "A",
-              "format": "table",
-              "instant": true
+              "expr": "count(up == 1) or vector(0)",
+              "legendFormat": "Up Targets",
+              "refId": "A"
+            },
+            {
+              "expr": "count(up == 0) or vector(0)",
+              "legendFormat": "Down Targets",
+              "refId": "B"
             }
           ],
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "auto",
+            "reduceOptions": {
+              "values": false,
+              "calcs": ["lastNotNull"]
+            }
+          },
           "fieldConfig": {
             "defaults": {
-              "mappings": [
-                {"type": "value", "value": "1", "text": "UP"},
-                {"type": "value", "value": "0", "text": "DOWN"}
-              ]
+              "thresholds": {
+                "steps": [
+                  {"color": "red", "value": null},
+                  {"color": "green", "value": 0}
+                ]
+              }
             }
           }
         },
