@@ -28,41 +28,18 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3000"
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: bentoml
-          image: ghcr.io/jinnso/taxi-fare-serving:latest
-          imagePullPolicy: Always
+          image: docker.io/library/taxi_fare_predictor:a6mvtks4vsvljlvy
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
               name: http
           env:
-            - name: MLFLOW_TRACKING_URI
-              valueFrom:
-                configMapKeyRef:
-                  name: bentoml-config
-                  key: mlflow_tracking_uri
-            - name: MODEL_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: bentoml-config
-                  key: model_name
-            - name: MODEL_STAGE
-              valueFrom:
-                configMapKeyRef:
-                  name: bentoml-config
-                  key: model_stage
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: minio-credentials
-                  key: root-user
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: minio-credentials
-                  key: root-password
-            - name: MLFLOW_S3_ENDPOINT_URL
-              value: http://minio.storage.svc.cluster.local:9000
+            - name: BENTOML_PORT
+              value: "3000"
           readinessProbe:
             httpGet:
               path: /healthz
