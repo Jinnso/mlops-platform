@@ -87,10 +87,13 @@ def train(params: dict = None):
 
         print(f"RMSE: {rmse:.4f}, MAE: {mae:.4f}, R²: {r2:.4f}")
 
-        mlflow.xgboost.log_model(
-            model,
-            artifact_path="model",
-            registered_model_name=MODEL_NAME,
+        mlflow.xgboost.save_model(model, path="model")
+
+        mlflow.log_artifacts("model", artifact_path="model")
+
+        result = mlflow.register_model(
+            f"runs:/{run.info.run_id}/model",
+            MODEL_NAME,
         )
 
         mlflow.log_artifact(preprocessor_path, artifact_path="preprocessor")
